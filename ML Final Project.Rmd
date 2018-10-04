@@ -1,0 +1,266 @@
+<center>
+#Project 2
+##Amy Nguyen
+##Machine Learning
+##Summer 2018
+</center>
+
+
+##Regression
+The data set that I am going to use for regression is the pollution data. My goal is to predict O3.AQI or ozone air quality index. The three algorithms I will be using for my regression models are the basic linear regression algorithm, kNN, and decision tree. SVM and Neural Network unfortunately take too long for me to be able to run. 
+
+####Importing Data
+Pollution: https://www.kaggle.com/sogun3/uspollution
+-The data originally had more columns and over 1 million objects. Since this is a bit too much data for my laptop to handle I cleaned the data and randomly sampled it earlier to reduce the data size. I then exported using "write.csv()" and now I'll be reading in the edited data.
+
+```{r}
+#Reading in edited pollution data
+pollutionDF <- read.csv("C:/Users/Amy Nguyen/Desktop/edited pollution.csv")
+
+#cleaning
+pollutionDF <- pollutionDF[-c(1)]
+
+```
+
+####Exploring the data
+Exploring the data for better understanding:
+```{r}
+str(pollutionDF)
+head(pollutionDF)
+tail(pollutionDF)
+```
+
+####Setting Train and Test 
+The same train and test sets will be used for each algorithm to ensure fair comparison
+```{r}
+set.seed(1111)
+i <- sample(1:nrow(pollutionDF), nrow(pollutionDF)*0.70, replace=FALSE)
+train1 <- pollutionDF[i,]
+test1 <- pollutionDF[-i,]
+```
+
+####Linear Regression
+
+####Creating the Linear regression model 
+```{r}
+lm <- lm(O3.AQI~., data=train1)
+summary(lm)
+```
+
+As you can see everything other than State.Code and CO.mean were good predictors as indicated by a low p-value.
+
+####Predict and evaluate in test data
+
+```{r}
+#Predicting
+predl1 <- predict(lm, newdata = test1)
+
+#Correlation
+corl1 <- cor(predl1, test1$O3.AQI)
+print(paste("Linear Regression Correlation: ", corl1))
+
+#Mean Squared Error
+msel1 <- mean((predl1 - test1$O3.AQI)^2)
+print(paste("Linear Regression mse: ", msel1))
+
+#Root Mean Squared Error
+rmsel1 <- sqrt(msel1)
+print(paste("Linear Regression rmse: ", rmsel1))
+
+```
+
+Unfortunately, our correlation is not too great as it's not near +/- 1. We'll use MSE and RMSE for comparison of our other models. 
+
+###kNN Regression
+Although kNN would be better scaled in order to keep consistency for each model, we will be leaving data unscaled.
+
+####Creating kNN model with best k and finding correlation and mse
+```{r}
+library(caret)
+library(DMwR)
+
+ck <- rep(0,20)
+msek <- rep(0,20)
+rmsek <- rep(0,20)
+
+i <- 1
+for (k in seq(1, 50, 5)){
+  fitk <- knnreg(train1[,1:7, 9:14],train1[,8], k=k)
+  predk <- predict(fitk, test1[,1:7, 9:14])
+  ck[i] <- cor(predk, test1$O3.AQI)
+  msek[i] <- mean((predk - test1$O3.AQI)^2)
+  rmsek[i] <- sqrt(msek[i])
+  print(paste("k=", k, "cor=", ck[i], "mse=", msek[i], "rmse= ", rmsek[i]))
+  i <- i + 1
+}
+```
+From our list, that has finally loaded in after some time, the best k value is k=21. It has the highest correlation value and lowest mse and rmse value. 
+
+Thus, the metrics for our unscaled kNN regression model are:
+Correlation = 0.5237
+mse = 283.5468
+rmse = 16.8388
+
+Comparing to the Linear regression model we can see that our unscaled kNN model performs much better. Our correlation is much higher and our mse and rmse values are lower. A possible reason why linear regression many have performed so poorly is because it may be too simplified for my scenario. 
+
+###Decision Tree
+
+####Creating the tree
+```{r}
+library(tree)
+treel1<- tree(O3.AQI~., data=train1)
+summary(treel1)
+```
+
+####Plotting 
+```{r}
+plot(treel1)
+text(treel1, cex=0.5, pretty=0)
+```
+
+#Evaluation the tree
+```{r}
+#Predicting
+predl2 <- predict(treel1, newdata=test1)
+
+#Correlation
+corl2 <- cor(predl2, test1$O3.AQI)
+print(paste("Decision Tree Correlation: ", corl1))
+
+#Mean Squared Error
+msel2 <- mean((predl2 - test1$O3.AQI)^2)
+print(paste("Decision Tree mse: ", msel2))
+
+#Root Mean Squared Error
+rmsel2 <- sqrt(msel2)
+print(paste("Decision Tree rmse: ", rmsel2))
+
+```
+
+As you can see out correlation is still not the best and in comparison, to the other algorithms it performed the worse. Linear regression's correlation is slightly higher, and it's mse and rmse values are slightly lower. That being said decision trees have a reputation of having low accuracy so I'm not surprised to see that it also has low correlation.
+
+####Evaluating the algorithms
+After going through the three algorithms I found that kNN worked the best for predicting Ozone Air Quality Index (O3.AQI). That being said although it performed the best the correlation of 0.5237 was still not that high. In order to improve results, I would scale the data for the kNN regression and test even more k values. I would also try random forest and bagging for the decision tree to see if that would yield better results.
+
+
+
+
+
+##Classification
+The data I'm going to be using for classification is this fraud data. I hope to detect whether or not the activity was or was not fraudulent based on the other variables. For classification the 3 algorithms that I will be using are logistic regression, Naive Bayes, and decision trees once again. Unfortunately, my laptop just cannot handle SVM or Neural Networks and crashes RStudio.
+
+####Importing the data
+Fraud: https://www.kaggle.com/ntnu-testimon/banksim1#bsNET140513_032310.csv
+-Just like the previous data I had to clean and sample the data to a smaller size in order to be able to use the data. The algorithms took too long or crashed RStudio previously. 
+
+```{r}
+#Reading in fraud data
+fraudDF <- read.csv("C:/Users/Amy Nguyen/Desktop/edited fraud.csv")
+
+#Cleaning
+fraudDF <- fraudDF[-c(1:3,5:8)]
+fraudDF <- na.omit(fraudDF)
+
+fraudDF$fraud <- as.factor(fraudDF$fraud)
+```
+
+
+####Exploring the data
+In order to get a better idea of our dataset let's explore it. 
+```{r}
+#Exploring fraudDF
+str(fraudDF)
+head(fraudDF)
+tail(fraudDF)
+```
+
+####Setting Train and Test 
+The same train and test sets will be used for each algorithm to ensure fair comparison
+```{r}
+set.seed(2222)
+i <- sample(1:nrow(fraudDF), nrow(fraudDF)*0.70, replace=FALSE)
+train2 <- fraudDF[i,]
+test2 <- fraudDF[-i,]
+```
+
+###Logistic Regression
+
+####Build logistic model
+```{r}
+glm1 <- glm(fraud~., data= train2, family = "binomial")
+summary(glm1)
+```
+
+So, from our data we can see a few interesting things. Our best predictors are the categories; hotel services, hyper, leisure, other service, sports and toys, travel, and the amount of money in the transaction. That being said, our null deviance is not too bad considering how much data we're dealing with but our residual deviance is much smaller so we might have a good model on our hands.
+
+####Evaluate on test data
+
+```{r}
+library(caret)
+
+probc1 <- predict(glm1, newdata= test2, type="response")
+predc1 <- ifelse(probc1>0.5, 1, 0)
+
+accc1 <- mean(predc1==test2$fraud)
+print(paste("accuracy = ", accc1))
+
+table(predc1, test2$fraud)
+
+```
+As you can see we have a very high accuracy. 
+
+###Naive Bayes
+
+####Created model and predict
+```{r}
+library(e1071)
+
+nb1 <- naiveBayes(fraud~., data=train2)
+nb1
+
+```
+
+####Evaluating on test
+```{r}
+
+predc2 <- predict(nb1, test2$fraud)
+
+accc2 <- mean(predc2==test2$fraud)
+print(paste("accuracy = ", accc2))
+
+table(predc2, test2$fraud)
+```
+
+As you can see we also got a large accuracy. However, our accuracy is lower than the accuracy of the logistic model. This may be because we are dealing with a larger dataset and Naive Bayes is best for smaller datasets.
+
+###Decision Tree
+
+#creating the tree
+```{r}
+library(tree)
+
+ctree <- tree(fraud~., data= train2)
+summary(ctree)
+```
+
+#Graphing
+```{r}
+plot(ctree)
+text(ctree, cex=0.5, pretty=0)
+```
+
+####Evaluating
+```{r}
+predc3 <- predict(ctree, newdata = test2, type="class")
+
+accc3 <- mean(predc3==test2$fraud)
+print(paste("accuracy = ", accc3))
+
+table(predc3, test2$fraud)
+```
+
+The decision tree also performed very well. However, it did not perform as well as the logistic regression. Once again this is most likely due to its reputation for low accuracy. That being said, with bagging, random forest, or even pruning the decision tree may yield better results.
+
+###Evaluating the Algorithms
+After going through the three algorithms, the logistic regression came out as the winner with the best accuracy. As stated before this might be because Naive Bayes is better suited for smaller datasets and Decision Tree are known to be inaccurate. Furthermore, we did not apply pruning, bagging, or random forest.
+
